@@ -1,0 +1,45 @@
+<%- include('partials/head') %>
+
+<div class="page-head">
+  <div>
+    <h1>⚙️ Settings</h1>
+    <p class="muted">Manage your profile and payment details</p>
+  </div>
+</div>
+
+<div class="settings-grid">
+  <div class="card">
+    <h2>👤 Profile</h2>
+    <form action="/settings" method="POST" class="form">
+      <input type="hidden" name="payment_number" value="<%= profile.payment_number || '' %>">
+      <label>Full name<input type="text" name="name" required maxlength="80" value="<%= profile.name %>"></label>
+      <label>Email<input type="email" value="<%= profile.email %>" disabled><span class="muted small">Email cannot be changed.</span></label>
+      <label>Bio<textarea name="bio" rows="3" maxlength="500" placeholder="Tell buyers about yourself…"><%= profile.bio || '' %></textarea></label>
+      <button class="btn btn-navy" type="submit">Save profile</button>
+    </form>
+  </div>
+
+  <div class="card pay-card">
+    <h2>💳 JazzCash number</h2>
+    <p class="muted">Buyers send your payment to this number. Make sure it's correct.</p>
+    <form action="/settings" method="POST" class="form">
+      <input type="hidden" name="name" value="<%= profile.name %>">
+      <input type="hidden" name="bio" value="<%= profile.bio || '' %>">
+      <label>JazzCash / Easypaisa number<input type="text" name="payment_number" maxlength="30" value="<%= profile.payment_number || '' %>" placeholder="e.g. 03001234567"></label>
+      <button class="btn btn-gold" type="submit">Save number</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>🔒 Change password</h2>
+    <form action="/settings" method="POST" class="form">
+      <input type="hidden" name="name" value="<%= profile.name %>">
+      <input type="hidden" name="bio" value="<%= profile.bio || '' %>">
+      <input type="hidden" name="payment_number" value="<%= profile.payment_number || '' %>">
+      <label>New password (min 6 characters)<input type="password" name="new_password" minlength="6" autocomplete="new-password" placeholder="Leave blank to keep current"></label>
+      <button class="btn btn-outline" type="submit">Change password</button>
+    </form>
+  </div>
+</div>
+
+<%- include('partials/foot') %>

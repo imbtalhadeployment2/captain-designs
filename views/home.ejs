@@ -25,7 +25,7 @@
     <% categories.forEach(cat => { %>
       <a class="chip" href="/browse?category=<%= encodeURIComponent(cat) %>">
         <span class="chip-name"><%= cat %></span>
-        <span class="chip-n"><%= catCount[cat] || 0 %> gigs</span>
+        <span class="chip-n"><%= plural(catCount[cat] || 0, 'gig') %></span>
       </a>
     <% }) %>
   </div>
@@ -39,7 +39,14 @@
   <div class="grid gigs-grid">
     <% featured.forEach(g => { %><%- include('partials/gig_card', { g }) %><% }) %>
   </div>
-  <% if (!featured.length) { %><p class="muted">No gigs yet — be the first seller to publish one!</p><% } %>
+  <% if (!featured.length) { %>
+    <div class="empty">
+      <div class="empty-icon">🎨</div>
+      <h3>The marketplace is brand new</h3>
+      <p class="muted">No gigs published yet — be the first seller to set sail!</p>
+      <a href="/signup" class="btn btn-gold">Become a seller</a>
+    </div>
+  <% } %>
 </section>
 
 <section class="section how">

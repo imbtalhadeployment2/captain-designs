@@ -1,6 +1,16 @@
 <%- include('partials/head') %>
 <div class="page-head"><h1>⚓ Captain's Bridge <span class="muted small">(Admin)</span></h1></div>
 
+<div class="card pay-card admin-pay">
+  <h2>💰 Commission collection</h2>
+  <div class="pay-line big">
+    <span class="pay-label">Total commission receivable (10% of completed orders)</span>
+    <strong class="gold-text"><%= money(totals.commission) %></strong>
+  </div>
+  <div class="pay-to">→ JazzCash <strong class="platform-num"><%= platformJazzcash %></strong> <span class="muted small">(Captain Designs)</span></div>
+  <p class="muted small">Sellers send your 10% cut to this number after every completed order.</p>
+</div>
+
 <div class="grid stat-grid">
   <div class="stat gold"><span class="stat-n"><%= money(totals.gmv) %></span><span class="stat-l">Total GMV</span></div>
   <div class="stat gold"><span class="stat-n"><%= money(totals.commission) %></span><span class="stat-l">Commission earned (10%)</span></div>

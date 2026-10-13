@@ -14,14 +14,25 @@ const otherName = user.id === conv.buyer_id ? conv.seller_name : conv.buyer_name
   <% if (!msgs.length) { %><p class="muted center">Say ahoy! Start the conversation below.</p><% } %>
   <% msgs.forEach(m => { %>
     <div class="msg <%= m.sender_id === user.id ? 'mine' : 'theirs' %>">
-      <div class="msg-body"><%= m.body %></div>
+      <% if (m.body) { %><div class="msg-body"><%= m.body %></div><% } %>
+      <% if (m.attachment) { %>
+        <div class="msg-attach">
+          <span class="attach-icon">📎</span>
+          <div class="attach-info">
+            <strong><%= m.attachment_name || 'Attachment' %></strong>
+            <span class="muted small"><%= fmtSize(m.attachment_size) %></span>
+          </div>
+          <a href="/attachments/<%= m.attachment %>" class="btn btn-sm btn-navy" download>⬇ Download</a>
+        </div>
+      <% } %>
       <div class="msg-meta"><%= m.sender_name %> · <%= fmtDate(m.created_at) %></div>
     </div>
   <% }) %>
 </div>
 
-<form action="/inbox/<%= conv.id %>/message" method="POST" class="chat-form">
-  <input type="text" name="body" required maxlength="2000" placeholder="Type your message…" autocomplete="off">
+<form action="/inbox/<%= conv.id %>/message" method="POST" enctype="multipart/form-data" class="chat-form">
+  <input type="text" name="body" maxlength="2000" placeholder="Type your message…" autocomplete="off">
+  <label class="file-btn" title="Attach a file (image, PDF, ZIP — max 10MB)">📎<input type="file" name="attachment" accept="image/*,.pdf,.zip" hidden></label>
   <button class="btn btn-gold" type="submit">Send</button>
 </form>
 

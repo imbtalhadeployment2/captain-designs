@@ -29,8 +29,8 @@
     </div>
   <% } %>
 
-  <label>Portfolio images (up to 3, max 5MB each, images only)
-    <input type="file" name="images" accept="image/*" multiple>
+  <label>Portfolio images (up to 3, max 5MB each, images only) — <strong>at least one is required</strong>
+    <input type="file" name="images" accept="image/*" multiple <%= gig ? '' : 'required' %>>
   </label>
 
   <button class="btn btn-gold btn-lg" type="submit"><%= gig ? 'Save changes' : 'Publish gig' %></button>

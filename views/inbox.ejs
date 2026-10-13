@@ -10,7 +10,7 @@
       <div class="conv-main">
         <div class="conv-top"><strong><%= c.other_name %></strong><span class="muted small"><%= c.last_at ? fmtDate(c.last_at) : '' %></span></div>
         <% if (c.gig_title) { %><div class="muted small">Re: <%= c.gig_title.length > 50 ? c.gig_title.slice(0,50)+'…' : c.gig_title %></div><% } %>
-        <div class="conv-last"><%= c.last_body ? (c.last_body.length > 70 ? c.last_body.slice(0,70)+'…' : c.last_body) : 'No messages yet' %></div>
+        <div class="conv-last"><%= c.last_body ? (c.last_body.length > 70 ? c.last_body.slice(0,70)+'…' : c.last_body) : (c.last_attach ? '📎 File attachment' : 'No messages yet') %></div>
       </div>
       <% if (c.unread_n > 0) { %><span class="badge"><%= c.unread_n %></span><% } %>
     </a>

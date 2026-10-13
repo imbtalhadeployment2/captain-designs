@@ -51,18 +51,47 @@ const otherName = isBuyer ? order.seller_name : order.buyer_name;
       <div class="price-row"><span>Seller earns</span><strong class="gold-text"><%= money(order.seller_amount_pkr || Math.round(order.price_pkr * 0.9)) %></strong></div>
     </div>
 
-    <div class="card">
-      <h2>Payment</h2>
+    <div class="card pay-card">
+      <h2>💳 Payment</h2>
+      <%
+        const commissionDue = order.commission_pkr || Math.round(order.price_pkr * 0.10);
+      %>
+      <div class="pay-box">
+        <div class="pay-line">
+          <span class="pay-label">Pay the seller</span>
+          <strong><%= money(order.price_pkr) %></strong>
+        </div>
+        <div class="pay-to">→ JazzCash <strong><%= sellerPayment || '—' %></strong></div>
+        <div class="pay-line fee">
+          <span class="pay-label">Platform fee (10%)</span>
+          <strong><%= money(commissionDue) %></strong>
+        </div>
+        <div class="pay-to fee">→ JazzCash <strong><%= platformJazzcash %></strong> <span class="muted small">(Captain Designs)</span></div>
+      </div>
+
+      <% if (isBuyer) { %>
+        <% if (!sellerPayment) { %>
+          <div class="warn">⚠️ The seller hasn't added a JazzCash number yet. Please ask them for it in the <a href="/inbox">inbox</a> before paying.</div>
+        <% } %>
+      <% } %>
+      <% if (isSeller && !user.payment_number) { %>
+        <div class="warn">⚠️ <strong>Add your JazzCash number</strong> in <a href="/settings">Settings</a> so buyers can pay you — otherwise they can't complete payment.</div>
+      <% } %>
+
       <% if (order.payment_status === 'unpaid') { %>
-        <p class="muted">Not paid yet.</p>
-        <% if (isBuyer && ['in_progress','delivered'].includes(order.status)) { %>
+        <% if (isBuyer && ['in_progress','delivered'].includes(order.status) && sellerPayment) { %>
+          <p class="muted small">Send <strong><%= money(order.price_pkr) %></strong> to the seller's JazzCash <strong><%= sellerPayment %></strong>, then enter the transaction ID (TID) from your payment SMS/receipt:</p>
           <form action="/orders/<%= order.id %>/pay" method="POST" class="form">
-            <label>How did you pay?<input type="text" name="method" required maxlength="120" placeholder="e.g. JazzCash 0300-1234567"></label>
-            <button class="btn btn-navy btn-block" type="submit">Mark as paid</button>
+            <label>JazzCash transaction ID (TID)<input type="text" name="tid" required maxlength="60" placeholder="e.g. 12345678901"></label>
+            <button class="btn btn-navy btn-block" type="submit">Mark as Paid</button>
           </form>
+        <% } else if (isBuyer && ['in_progress','delivered'].includes(order.status)) { %>
+          <p class="muted">Payment is waiting on the seller's JazzCash number.</p>
+        <% } else { %>
+          <p class="muted">Not paid yet.</p>
         <% } %>
       <% } else { %>
-        <p>💳 <strong><%= order.payment_method %></strong></p>
+        <p>💳 <strong>JazzCash</strong> <span class="muted">· TID: <%= order.payment_tid || order.payment_method %></span></p>
         <p><span class="status-pill <%= order.payment_status === 'confirmed' ? 'completed' : 'delivered' %>"><%= order.payment_status === 'confirmed' ? 'Payment confirmed' : 'Marked paid — awaiting seller confirmation' %></span></p>
         <% if (isSeller && order.payment_status === 'marked_paid') { %>
           <form action="/orders/<%= order.id %>/pay-confirm" method="POST"><button class="btn btn-gold btn-block" type="submit">Confirm payment received</button></form>
