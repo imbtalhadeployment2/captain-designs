@@ -1,0 +1,18 @@
+<div class="gig-card">
+  <a href="/gig/<%= g.id %>" class="gig-cover">
+    <% if (g.cover) { %><img src="/uploads/<%= g.cover %>" alt="<%= g.title %>" loading="lazy"><% } else { %>
+    <div class="gig-cover-fallback">⚓</div><% } %>
+    <span class="gig-cat"><%= g.category %></span>
+  </a>
+  <div class="gig-body">
+    <a href="/gig/<%= g.id %>" class="gig-title"><%= g.title %></a>
+    <div class="gig-meta">
+      <span class="seller">⚓ <%= g.seller_name %></span>
+      <% if (g.review_count > 0) { %><span class="rating">★ <%= g.avg_rating %> (<%= g.review_count %>)</span><% } %>
+    </div>
+    <div class="gig-foot">
+      <span class="gig-delivery">🚚 <%= g.delivery_days %> day<%= g.delivery_days > 1 ? 's' : '' %></span>
+      <span class="gig-price"><%= money(g.price_pkr) %></span>
+    </div>
+  </div>
+</div>

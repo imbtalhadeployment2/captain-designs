@@ -1,0 +1,9 @@
+<tr>
+  <td><a href="/orders/<%= o.id %>">#<%= o.id %></a></td>
+  <td class="hide-sm"><a href="/orders/<%= o.id %>"><%= o.title_snapshot.length > 45 ? o.title_snapshot.slice(0,45) + '…' : o.title_snapshot %></a></td>
+  <td><%= side === 'seller' ? o.buyer_name : o.seller_name %></td>
+  <td><%= money(o.price_pkr) %></td>
+  <td><span class="status-pill <%= o.status %>"><%= o.status.replace('_',' ') %></span></td>
+  <td class="hide-sm"><%= fmtDate(o.updated_at) %></td>
+  <td><a href="/orders/<%= o.id %>" class="btn btn-sm btn-navy">View</a></td>
+</tr>

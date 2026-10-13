@@ -1,0 +1,10 @@
+<% if (!orders.length) { %>
+  <div class="empty"><p>No orders yet.</p></div>
+<% } else { %>
+<div class="table-wrap"><table class="table">
+  <thead><tr><th>#</th><th class="hide-sm">Gig</th><th><%= side === 'seller' ? 'Buyer' : 'Seller' %></th><th>Price</th><th>Status</th><th class="hide-sm">Updated</th><th></th></tr></thead>
+  <tbody>
+    <% orders.forEach(o => { %><%- include('order_row', { o, side }) %><% }) %>
+  </tbody>
+</table></div>
+<% } %>
