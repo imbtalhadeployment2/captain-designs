@@ -23,6 +23,9 @@ const PORT = process.env.PORT || 3000;
 
 const UPLOADS_DIR = path.join(__dirname, 'uploads');
 fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+// Inbox attachments live here; NEVER served statically — only via the secure download route.
+const ATTACH_DIR = path.join(UPLOADS_DIR, 'attachments');
+fs.mkdirSync(ATTACH_DIR, { recursive: true });
 
 const CATEGORIES = [
   'Logo Design',
@@ -35,12 +38,20 @@ const CATEGORIES = [
 ];
 
 const COMMISSION_RATE = 0.10;
+// Platform JazzCash number — Talha's 10% commission goes here.
+const PLATFORM_JAZZCASH = '03032279864';
 
 // ---------- view setup ----------
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 app.use(express.static(path.join(__dirname, 'public')));
-app.use('/uploads', express.static(UPLOADS_DIR));
+// Serve uploaded gig images / deliverables, but NEVER anything under attachments/
+// (those go through the secure /attachments/:filename route with a membership check).
+app.get('/uploads/:file', (req, res, next) => {
+  const f = path.basename(String(req.params.file || ''));
+  if (!f || f.startsWith('.')) return res.status(404).end();
+  res.sendFile(path.join(UPLOADS_DIR, f), (err) => { if (err) next(); });
+});
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
 app.use(session({
@@ -54,11 +65,17 @@ app.use(session({
 const clean = (s, max = 500) => String(s == null ? '' : s).trim().slice(0, max);
 const money = (n) => 'PKR ' + Number(n || 0).toLocaleString('en-PK');
 const fmtDate = (s) => String(s || '').slice(0, 16).replace('T', ' ');
+const fmtSize = (b) => {
+  b = Number(b || 0);
+  if (b >= 1048576) return (b / 1048576).toFixed(1) + ' MB';
+  return Math.max(1, Math.round(b / 1024)) + ' KB';
+};
+const plural = (n, one, many) => `${n} ${Number(n) === 1 ? one : (many || one + 's')}`;
 
 function setFlash(req, type, msg) { req.session.flash = { type, msg }; }
 
 function getUser(id) {
-  return db.prepare('SELECT id, name, email, role, bio, is_admin, created_at FROM users WHERE id = ?').get(id);
+  return db.prepare('SELECT id, name, email, role, bio, payment_number, is_admin, created_at FROM users WHERE id = ?').get(id);
 }
 function unreadCount(userId) {
   const r = db.prepare(
@@ -77,6 +94,9 @@ app.use((req, res, next) => {
   res.locals.unread = res.locals.user ? unreadCount(res.locals.user.id) : 0;
   res.locals.money = money;
   res.locals.fmtDate = fmtDate;
+  res.locals.fmtSize = fmtSize;
+  res.locals.plural = plural;
+  res.locals.platformJazzcash = PLATFORM_JAZZCASH;
   res.locals.categories = CATEGORIES;
   res.locals.path = req.path;
   next();
@@ -113,6 +133,20 @@ const deliverableFilter = (req, file, cb) => {
 };
 const gigUpload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 }, fileFilter: imageOnly });
 const deliverUpload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 }, fileFilter: deliverableFilter });
+
+// Inbox attachments: images, PDF, ZIP — up to 10MB, stored under uploads/attachments/
+const attachStorage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, ATTACH_DIR),
+  filename: (req, file, cb) => {
+    const safe = path.basename(file.originalname).replace(/[^a-zA-Z0-9.\-_]/g, '_').slice(0, 80);
+    cb(null, Date.now() + '-' + Math.round(Math.random() * 1e6) + '-' + safe);
+  },
+});
+const attachFilter = (req, file, cb) => {
+  const ok = /^(image\/|application\/(pdf|zip|x-zip-compressed|x-rar-compressed|x-7z-compressed))/.test(file.mimetype || '');
+  ok ? cb(null, true) : cb(new Error('Attachment must be an image, PDF or ZIP file (max 10MB).'));
+};
+const attachUpload = multer({ storage: attachStorage, limits: { fileSize: 10 * 1024 * 1024 }, fileFilter: attachFilter });
 
 function multerErr(res, req, next) {
   return (err) => {
@@ -185,8 +219,14 @@ app.get('/gig/:id', (req, res) => {
 });
 
 // ---------- auth ----------
-app.get('/login', (req, res) => res.render('login'));
-app.get('/signup', (req, res) => res.render('signup'));
+app.get('/login', (req, res) => {
+  if (res.locals.user) return res.redirect('/');
+  res.render('login');
+});
+app.get('/signup', (req, res) => {
+  if (res.locals.user) return res.redirect('/');
+  res.render('signup');
+});
 
 app.post('/signup', (req, res) => {
   const name = clean(req.body.name, 80);
@@ -223,6 +263,30 @@ app.post('/login', (req, res) => {
 
 app.get('/logout', (req, res) => {
   req.session.destroy(() => res.redirect('/'));
+});
+
+// ---------- settings ----------
+app.get('/settings', requireLogin, (req, res) => {
+  const profile = db.prepare('SELECT id, name, email, role, bio, payment_number, created_at FROM users WHERE id = ?')
+    .get(res.locals.user.id);
+  res.render('settings', { profile });
+});
+
+app.post('/settings', requireLogin, (req, res) => {
+  const me = res.locals.user;
+  const name = clean(req.body.name, 80);
+  const bio = clean(req.body.bio, 500);
+  const payment_number = clean(req.body.payment_number, 30).replace(/[^\d+\- ]/g, '');
+  const newPw = String(req.body.new_password || '');
+  if (!name) { setFlash(req, 'error', 'Name is required.'); return res.redirect('/settings'); }
+  db.prepare('UPDATE users SET name = ?, bio = ?, payment_number = ? WHERE id = ?')
+    .run(name, bio, payment_number, me.id);
+  if (newPw) {
+    if (newPw.length < 6) { setFlash(req, 'error', 'New password must be at least 6 characters.'); return res.redirect('/settings'); }
+    db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(bcrypt.hashSync(newPw, 10), me.id);
+  }
+  setFlash(req, 'success', 'Settings saved.');
+  res.redirect('/settings');
 });
 
 // ---------- seller ----------
@@ -272,6 +336,10 @@ app.post('/seller/gigs', requireLogin, requireSeller,
       setFlash(req, 'error', 'Title, valid category and price are required.');
       return res.redirect('/seller/gigs/new');
     }
+    if (!req.files || !req.files.length) {
+      setFlash(req, 'error', 'Please upload at least one portfolio image — buyers need to see your work.');
+      return res.redirect('/seller/gigs/new');
+    }
     const gigId = db.prepare(
       'INSERT INTO gigs (seller_id, title, category, description, price_pkr, delivery_days) VALUES (?, ?, ?, ?, ?, ?)'
     ).run(me.id, title, category, description, price, days).lastInsertRowid;
@@ -316,8 +384,13 @@ app.post('/seller/gigs/:id', requireLogin, requireSeller,
       }
     }
     const count = db.prepare('SELECT COUNT(*) AS c FROM gig_images WHERE gig_id = ?').get(gig.id).c;
+    const newFiles = (req.files || []).slice(0, Math.max(0, 3 - count));
+    if (count + newFiles.length < 1) {
+      setFlash(req, 'error', 'A gig must keep at least one portfolio image.');
+      return res.redirect('/seller/gigs/' + gig.id + '/edit');
+    }
     const ins = db.prepare('INSERT INTO gig_images (gig_id, filename) VALUES (?, ?)');
-    for (const f of (req.files || []).slice(0, Math.max(0, 3 - count))) ins.run(gig.id, f.filename);
+    for (const f of newFiles) ins.run(gig.id, f.filename);
     setFlash(req, 'success', 'Gig updated.');
     res.redirect('/gig/' + gig.id);
   });
@@ -385,7 +458,8 @@ app.get('/orders/:id', requireLogin, (req, res) => {
   const events = db.prepare('SELECT * FROM order_events WHERE order_id = ? ORDER BY created_at').all(order.id);
   const cover = db.prepare('SELECT filename FROM gig_images WHERE gig_id = ? ORDER BY id LIMIT 1').get(order.gig_id);
   const review = db.prepare('SELECT * FROM reviews WHERE order_id = ?').get(order.id);
-  res.render('order', { order, events, cover: cover && cover.filename, review });
+  const seller = db.prepare('SELECT payment_number FROM users WHERE id = ?').get(order.seller_id);
+  res.render('order', { order, events, cover: cover && cover.filename, review, sellerPayment: seller ? seller.payment_number : '' });
 });
 
 app.post('/orders/:id/accept', requireLogin, (req, res) => {
@@ -454,10 +528,11 @@ app.post('/orders/:id/pay', requireLogin, (req, res) => {
   const me = res.locals.user;
   const o = getOrderFor(me, req.params.id);
   if (!o || o.buyer_id !== me.id || !['in_progress', 'delivered'].includes(o.status)) return res.redirect('back');
-  const method = clean(req.body.method, 120);
-  if (!method) { setFlash(req, 'error', 'Please tell the seller how you paid (e.g. JazzCash, Easypaisa, bank transfer).'); return res.redirect('/orders/' + o.id); }
-  db.prepare("UPDATE orders SET payment_method = ?, payment_status = 'marked_paid' WHERE id = ?").run(method, o.id);
-  addEvent(o.id, 'paid_marked', `Buyer marked payment as sent via ${method}.`);
+  const tid = clean(req.body.tid, 60);
+  if (!tid) { setFlash(req, 'error', 'Please enter the JazzCash transaction ID (TID) from your payment SMS/receipt.'); return res.redirect('/orders/' + o.id); }
+  db.prepare("UPDATE orders SET payment_method = 'JazzCash', payment_tid = ?, payment_status = 'marked_paid' WHERE id = ?")
+    .run(tid, o.id);
+  addEvent(o.id, 'paid_marked', `Buyer marked payment as sent via JazzCash (TID: ${tid}).`);
   setFlash(req, 'success', 'Payment marked as sent. The seller will confirm receipt.');
   res.redirect('/orders/' + o.id);
 });
@@ -495,6 +570,7 @@ app.get('/inbox', requireLogin, (req, res) => {
         CASE WHEN c.buyer_id = ? THEN c.seller_id ELSE c.buyer_id END AS other_id,
         g.title AS gig_title,
         (SELECT body FROM messages WHERE conversation_id = c.id ORDER BY id DESC LIMIT 1) AS last_body,
+        (SELECT attachment FROM messages WHERE conversation_id = c.id ORDER BY id DESC LIMIT 1) AS last_attach,
         (SELECT created_at FROM messages WHERE conversation_id = c.id ORDER BY id DESC LIMIT 1) AS last_at,
         (SELECT COUNT(*) FROM messages WHERE conversation_id = c.id AND sender_id != ? AND is_read = 0) AS unread_n
      FROM conversations c
@@ -551,15 +627,39 @@ app.get('/inbox/:id', requireLogin, (req, res) => {
   res.render('conversation', { conv, msgs });
 });
 
-app.post('/inbox/:id/message', requireLogin, (req, res) => {
+app.post('/inbox/:id/message', requireLogin,
+  (req, res, next) => attachUpload.single('attachment')(req, res, multerErr(res, req, next)),
+  (req, res) => {
+    const me = res.locals.user;
+    const conv = db.prepare('SELECT * FROM conversations WHERE id = ?').get(req.params.id);
+    if (!conv || (conv.buyer_id !== me.id && conv.seller_id !== me.id)) {
+      if (req.file) { try { fs.unlinkSync(req.file.path); } catch (e) {} }
+      return res.redirect('/inbox');
+    }
+    const body = clean(req.body.body, 2000);
+    if (!body && !req.file) return res.redirect('/inbox/' + conv.id);
+    db.prepare(`INSERT INTO messages (conversation_id, sender_id, body, attachment, attachment_name, attachment_size)
+      VALUES (?, ?, ?, ?, ?, ?)`)
+      .run(conv.id, me.id, body,
+        req.file ? req.file.filename : '',
+        req.file ? String(req.file.originalname).slice(0, 120) : '',
+        req.file ? req.file.size : 0);
+    db.prepare("UPDATE conversations SET updated_at = datetime('now') WHERE id = ?").run(conv.id);
+    res.redirect('/inbox/' + conv.id);
+  });
+
+// Secure attachment download — only the two conversation participants may download.
+app.get('/attachments/:filename', requireLogin, (req, res) => {
   const me = res.locals.user;
-  const conv = db.prepare('SELECT * FROM conversations WHERE id = ?').get(req.params.id);
-  if (!conv || (conv.buyer_id !== me.id && conv.seller_id !== me.id)) return res.redirect('/inbox');
-  const body = clean(req.body.body, 2000);
-  if (!body) return res.redirect('/inbox/' + conv.id);
-  db.prepare('INSERT INTO messages (conversation_id, sender_id, body) VALUES (?, ?, ?)').run(conv.id, me.id, body);
-  db.prepare("UPDATE conversations SET updated_at = datetime('now') WHERE id = ?").run(conv.id);
-  res.redirect('/inbox/' + conv.id);
+  const fn = path.basename(String(req.params.filename || ''));
+  const msg = db.prepare(
+    `SELECT m.* FROM messages m JOIN conversations c ON c.id = m.conversation_id
+     WHERE m.attachment = ? AND (c.buyer_id = ? OR c.seller_id = ?)`
+  ).get(fn, me.id, me.id);
+  if (!msg) return res.status(404).render('error', { code: 404, message: 'File not found.' });
+  const p = path.join(ATTACH_DIR, fn);
+  if (!fs.existsSync(p)) return res.status(404).render('error', { code: 404, message: 'File not found.' });
+  res.download(p, msg.attachment_name || fn);
 });
 
 // ---------- admin (Talha) ----------

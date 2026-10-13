@@ -96,3 +96,14 @@ CREATE TABLE IF NOT EXISTS transactions (
 `);
 
 module.exports = db;
+
+// ---- lightweight migrations for columns added after first release ----
+function addColumn(table, def) {
+  try { db.exec(`ALTER TABLE ${table} ADD COLUMN ${def}`); }
+  catch (e) { if (!/duplicate column/i.test(e.message)) throw e; }
+}
+addColumn('users', "payment_number TEXT DEFAULT ''");
+addColumn('messages', "attachment TEXT DEFAULT ''");
+addColumn('messages', "attachment_name TEXT DEFAULT ''");
+addColumn('messages', "attachment_size INTEGER NOT NULL DEFAULT 0");
+addColumn('orders', "payment_tid TEXT DEFAULT ''");
