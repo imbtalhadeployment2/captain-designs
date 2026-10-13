@@ -1,0 +1,22 @@
+<%- include('partials/head') %>
+<div class="auth-wrap">
+  <div class="auth-card">
+    <h1>Join the crew</h1>
+    <p class="muted">Create your free CAPTAIN DESIGNS account</p>
+    <form action="/signup" method="POST" class="form">
+      <label>Full name<input type="text" name="name" required maxlength="80"></label>
+      <label>Email<input type="email" name="email" required autocomplete="email"></label>
+      <label>Password (min 6 characters)<input type="password" name="password" required minlength="6" autocomplete="new-password"></label>
+      <label>I want to
+        <select name="role">
+          <option value="buyer">Hire designers (Buyer)</option>
+          <option value="seller">Sell my designs (Seller)</option>
+          <option value="both">Both — buy &amp; sell</option>
+        </select>
+      </label>
+      <button class="btn btn-gold btn-block btn-lg" type="submit">Create account</button>
+    </form>
+    <p class="muted center">Already aboard? <a href="/login">Log in</a></p>
+  </div>
+</div>
+<%- include('partials/foot') %>

@@ -1,0 +1,45 @@
+<%- include('partials/head') %>
+
+<div class="page-head">
+  <h1>⚓ Seller Dashboard</h1>
+  <a href="/seller/gigs/new" class="btn btn-gold">+ New Gig</a>
+</div>
+
+<div class="grid stat-grid">
+  <div class="stat"><span class="stat-n"><%= stats.total_orders %></span><span class="stat-l">Total orders</span></div>
+  <div class="stat"><span class="stat-n"><%= stats.active_orders %></span><span class="stat-l">Active orders</span></div>
+  <div class="stat gold"><span class="stat-n"><%= money(stats.earnings) %></span><span class="stat-l">Earnings (90%)</span></div>
+  <div class="stat"><span class="stat-n"><%= stats.active_gigs %></span><span class="stat-l">Active gigs</span></div>
+</div>
+
+<h2 class="section-title">My gigs</h2>
+<% if (!gigs.length) { %>
+  <div class="empty"><p>You haven't published any gigs yet.</p><a href="/seller/gigs/new" class="btn btn-gold">Create your first gig</a></div>
+<% } %>
+<div class="grid gigs-grid">
+  <% gigs.forEach(g => { %>
+    <div class="gig-card manage">
+      <a href="/gig/<%= g.id %>" class="gig-cover">
+        <% if (g.cover) { %><img src="/uploads/<%= g.cover %>" alt=""><% } else { %><div class="gig-cover-fallback">⚓</div><% } %>
+        <span class="status-pill <%= g.status %> overlay"><%= g.status %></span>
+      </a>
+      <div class="gig-body">
+        <a href="/gig/<%= g.id %>" class="gig-title"><%= g.title %></a>
+        <div class="gig-meta"><span><%= g.order_count %> order<%= g.order_count === 1 ? '' : 's' %></span><span class="gig-price"><%= money(g.price_pkr) %></span></div>
+        <div class="manage-row">
+          <a href="/seller/gigs/<%= g.id %>/edit" class="btn btn-sm btn-outline">Edit</a>
+          <form action="/seller/gigs/<%= g.id %>/toggle" method="POST"><button class="btn btn-sm btn-navy" type="submit"><%= g.status === 'active' ? 'Pause' : 'Resume' %></button></form>
+          <form action="/seller/gigs/<%= g.id %>/delete" method="POST" onsubmit="return confirm('Delete this gig?')"><button class="btn btn-sm btn-danger" type="submit">Delete</button></form>
+        </div>
+      </div>
+    </div>
+  <% }) %>
+</div>
+
+<div class="section-head">
+  <h2 class="section-title">Recent orders</h2>
+  <a href="/seller/orders" class="link-more">View all →</a>
+</div>
+<%- include('partials/orders_table', { orders, side: 'seller' }) %>
+
+<%- include('partials/foot') %>

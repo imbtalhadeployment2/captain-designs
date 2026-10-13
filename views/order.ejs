@@ -1,0 +1,117 @@
+<%- include('partials/head') %>
+<%
+const isBuyer = user.id === order.buyer_id;
+const isSeller = user.id === order.seller_id;
+const otherName = isBuyer ? order.seller_name : order.buyer_name;
+%>
+
+<div class="crumbs"><a href="/">Home</a> / <a href="<%= isBuyer ? '/buyer/orders' : '/seller/orders' %>">Orders</a> / #<%= order.id %></div>
+
+<div class="order-layout">
+  <div class="order-main">
+    <div class="card">
+      <div class="order-head">
+        <div>
+          <h1>Order #<%= order.id %></h1>
+          <p class="muted"><a href="/gig/<%= order.gig_id %>"><%= order.title_snapshot %></a></p>
+        </div>
+        <span class="status-pill big <%= order.status %>"><%= order.status.replace('_', ' ') %></span>
+      </div>
+      <div class="order-parties">
+        <div><span class="muted">Buyer</span><strong><%= order.buyer_name %></strong></div>
+        <div><span class="muted">Seller</span><strong><%= order.seller_name %></strong></div>
+        <div><span class="muted">Ordered</span><strong><%= fmtDate(order.created_at) %></strong></div>
+      </div>
+      <% if (cover) { %><img class="order-cover" src="/uploads/<%= cover %>" alt=""><% } %>
+    </div>
+
+    <div class="card">
+      <h2>Timeline</h2>
+      <ul class="timeline">
+        <% events.forEach(e => { %>
+          <li><span class="t-dot"></span><div><strong><%= e.event.replace(/_/g, ' ') %></strong><p class="muted"><%= e.note %></p><span class="muted small"><%= fmtDate(e.created_at) %></span></div></li>
+        <% }) %>
+      </ul>
+    </div>
+
+    <% if (review) { %>
+      <div class="card">
+        <h2>Buyer review</h2>
+        <div class="rating big"><%= '★'.repeat(review.rating) %><%= '☆'.repeat(5 - review.rating) %></div>
+        <p><%= review.comment %></p>
+      </div>
+    <% } %>
+  </div>
+
+  <aside class="order-side">
+    <div class="card">
+      <h2>Price</h2>
+      <div class="price-row"><span>Order total</span><strong><%= money(order.price_pkr) %></strong></div>
+      <div class="price-row"><span>Platform fee (10%)</span><span><%= money(order.commission_pkr) %></span></div>
+      <div class="price-row"><span>Seller earns</span><strong class="gold-text"><%= money(order.seller_amount_pkr || Math.round(order.price_pkr * 0.9)) %></strong></div>
+    </div>
+
+    <div class="card">
+      <h2>Payment</h2>
+      <% if (order.payment_status === 'unpaid') { %>
+        <p class="muted">Not paid yet.</p>
+        <% if (isBuyer && ['in_progress','delivered'].includes(order.status)) { %>
+          <form action="/orders/<%= order.id %>/pay" method="POST" class="form">
+            <label>How did you pay?<input type="text" name="method" required maxlength="120" placeholder="e.g. JazzCash 0300-1234567"></label>
+            <button class="btn btn-navy btn-block" type="submit">Mark as paid</button>
+          </form>
+        <% } %>
+      <% } else { %>
+        <p>💳 <strong><%= order.payment_method %></strong></p>
+        <p><span class="status-pill <%= order.payment_status === 'confirmed' ? 'completed' : 'delivered' %>"><%= order.payment_status === 'confirmed' ? 'Payment confirmed' : 'Marked paid — awaiting seller confirmation' %></span></p>
+        <% if (isSeller && order.payment_status === 'marked_paid') { %>
+          <form action="/orders/<%= order.id %>/pay-confirm" method="POST"><button class="btn btn-gold btn-block" type="submit">Confirm payment received</button></form>
+        <% } %>
+      <% } %>
+    </div>
+
+    <div class="card">
+      <h2>Deliverable</h2>
+      <% if (order.deliverable_file) { %>
+        <% if (/\.(png|jpe?g|gif|webp|svg)$/i.test(order.deliverable_file)) { %>
+          <img class="deliver-preview" src="/uploads/<%= order.deliverable_file %>" alt="Delivered design">
+        <% } %>
+        <a href="/uploads/<%= order.deliverable_file %>" download class="btn btn-navy btn-block">⬇ Download file</a>
+      <% } else { %><p class="muted">No file delivered yet.</p><% } %>
+      <% if (isSeller && order.status === 'in_progress') { %>
+        <form action="/orders/<%= order.id %>/deliver" method="POST" enctype="multipart/form-data" class="form">
+          <label>Upload finished design (image / PDF / ZIP, max 5MB)<input type="file" name="deliverable" required accept="image/*,.pdf,.zip"></label>
+          <button class="btn btn-gold btn-block" type="submit">Deliver order</button>
+        </form>
+      <% } %>
+    </div>
+
+    <div class="card actions">
+      <h2>Actions</h2>
+      <% if (isSeller && order.status === 'pending') { %>
+        <form action="/orders/<%= order.id %>/accept" method="POST"><button class="btn btn-gold btn-block" type="submit">✅ Accept order</button></form>
+      <% } %>
+      <% if (isBuyer && order.status === 'delivered') { %>
+        <form action="/orders/<%= order.id %>/complete" method="POST"><button class="btn btn-gold btn-block" type="submit">✅ Confirm completion</button></form>
+        <form action="/orders/<%= order.id %>/revision" method="POST" class="form">
+          <label>Request a revision<input type="text" name="note" maxlength="500" placeholder="What should change?"></label>
+          <button class="btn btn-outline btn-block" type="submit">🔁 Request revision</button>
+        </form>
+      <% } %>
+      <% if ((isBuyer && order.status === 'pending') || (isSeller && ['pending','in_progress'].includes(order.status))) { %>
+        <form action="/orders/<%= order.id %>/cancel" method="POST" onsubmit="return confirm('Cancel this order?')"><button class="btn btn-danger btn-block" type="submit">Cancel order</button></form>
+      <% } %>
+      <% if (isBuyer && order.status === 'completed' && !review) { %>
+        <form action="/orders/<%= order.id %>/review" method="POST" class="form">
+          <h3>Leave a review</h3>
+          <label>Rating<select name="rating"><option value="5">★★★★★ (5)</option><option value="4">★★★★ (4)</option><option value="3">★★★ (3)</option><option value="2">★★ (2)</option><option value="1">★ (1)</option></select></label>
+          <label>Comment<textarea name="comment" rows="3" maxlength="1000"></textarea></label>
+          <button class="btn btn-navy btn-block" type="submit">Submit review</button>
+        </form>
+      <% } %>
+      <% if (order.status === 'completed') { %><p class="muted small center">🎉 Order complete. Fair winds!</p><% } %>
+    </div>
+  </aside>
+</div>
+
+<%- include('partials/foot') %>

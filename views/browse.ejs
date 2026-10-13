@@ -1,0 +1,31 @@
+<%- include('partials/head') %>
+
+<div class="page-head">
+  <h1><%= q ? 'Results for "' + q + '"' : (category ? category : 'Browse all gigs') %></h1>
+  <form class="browse-bar" action="/browse" method="GET">
+    <input type="text" name="q" value="<%= q %>" placeholder="Search gigs…" aria-label="Search gigs">
+    <select name="category" aria-label="Category">
+      <option value="">All categories</option>
+      <% categories.forEach(c => { %>
+        <option value="<%= c %>" <%= category === c ? 'selected' : '' %>><%= c %></option>
+      <% }) %>
+    </select>
+    <button class="btn btn-navy" type="submit">Search</button>
+  </form>
+</div>
+
+<div class="chip-row slim">
+  <a class="chip <%= !category ? 'active' : '' %>" href="/browse<%= q ? '?q=' + encodeURIComponent(q) : '' %>">All</a>
+  <% categories.forEach(c => { %>
+    <a class="chip <%= category === c ? 'active' : '' %>" href="/browse?category=<%= encodeURIComponent(c) %><%= q ? '&q=' + encodeURIComponent(q) : '' %>"><%= c %></a>
+  <% }) %>
+</div>
+
+<div class="grid gigs-grid">
+  <% gigs.forEach(g => { %><%- include('partials/gig_card', { g }) %><% }) %>
+</div>
+<% if (!gigs.length) { %>
+  <div class="empty"><p>No gigs found. Try a different search.</p><a href="/browse" class="btn btn-navy">Clear filters</a></div>
+<% } %>
+
+<%- include('partials/foot') %>

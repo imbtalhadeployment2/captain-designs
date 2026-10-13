@@ -1,0 +1,28 @@
+<%- include('partials/head') %>
+<%
+const otherName = user.id === conv.buyer_id ? conv.seller_name : conv.buyer_name;
+%>
+<div class="page-head">
+  <div>
+    <h1>💬 <%= otherName %></h1>
+    <% if (conv.gig_title) { %><p class="muted">Re: <a href="/gig/<%= conv.gig_id %>"><%= conv.gig_title %></a></p><% } %>
+  </div>
+  <a href="/inbox" class="btn btn-outline">← All chats</a>
+</div>
+
+<div class="chat" id="chatBox">
+  <% if (!msgs.length) { %><p class="muted center">Say ahoy! Start the conversation below.</p><% } %>
+  <% msgs.forEach(m => { %>
+    <div class="msg <%= m.sender_id === user.id ? 'mine' : 'theirs' %>">
+      <div class="msg-body"><%= m.body %></div>
+      <div class="msg-meta"><%= m.sender_name %> · <%= fmtDate(m.created_at) %></div>
+    </div>
+  <% }) %>
+</div>
+
+<form action="/inbox/<%= conv.id %>/message" method="POST" class="chat-form">
+  <input type="text" name="body" required maxlength="2000" placeholder="Type your message…" autocomplete="off">
+  <button class="btn btn-gold" type="submit">Send</button>
+</form>
+
+<%- include('partials/foot') %>

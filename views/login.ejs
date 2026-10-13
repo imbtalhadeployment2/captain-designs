@@ -1,0 +1,14 @@
+<%- include('partials/head') %>
+<div class="auth-wrap">
+  <div class="auth-card">
+    <h1>Welcome aboard</h1>
+    <p class="muted">Log in to CAPTAIN DESIGNS</p>
+    <form action="/login" method="POST" class="form">
+      <label>Email<input type="email" name="email" required autocomplete="email"></label>
+      <label>Password<input type="password" name="password" required autocomplete="current-password"></label>
+      <button class="btn btn-gold btn-block btn-lg" type="submit">Login</button>
+    </form>
+    <p class="muted center">New here? <a href="/signup">Create an account</a></p>
+  </div>
+</div>
+<%- include('partials/foot') %>

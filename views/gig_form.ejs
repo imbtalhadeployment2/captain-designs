@@ -1,0 +1,39 @@
+<%- include('partials/head') %>
+
+<div class="page-head">
+  <h1><%= gig ? 'Edit gig' : 'Create a new gig' %></h1>
+  <a href="/seller" class="btn btn-outline">← Back to dashboard</a>
+</div>
+
+<form action="<%= gig ? '/seller/gigs/' + gig.id : '/seller/gigs' %>" method="POST" enctype="multipart/form-data" class="form card-form">
+  <label>Gig title<input type="text" name="title" required maxlength="120" value="<%= gig ? gig.title : '' %>" placeholder="e.g. I will design a premium logo for your brand"></label>
+  <div class="form-row">
+    <label>Category
+      <select name="category" required>
+        <% categories.forEach(c => { %>
+          <option value="<%= c %>" <%= gig && gig.category === c ? 'selected' : '' %>><%= c %></option>
+        <% }) %>
+      </select>
+    </label>
+    <label>Price (PKR)<input type="number" name="price_pkr" required min="1" max="10000000" value="<%= gig ? gig.price_pkr : '' %>" placeholder="2500"></label>
+    <label>Delivery (days)<input type="number" name="delivery_days" required min="1" max="90" value="<%= gig ? gig.delivery_days : 3 %>"></label>
+  </div>
+  <label>Description<textarea name="description" rows="7" maxlength="3000" placeholder="Describe what the buyer gets, revisions, file formats…"><%= gig ? gig.description : '' %></textarea></label>
+
+  <% if (images.length) { %>
+    <label>Current images (tick to remove)</label>
+    <div class="gallery-thumbs">
+      <% images.forEach(im => { %>
+        <label class="thumb-check"><img src="/uploads/<%= im.filename %>"><input type="checkbox" name="remove_image" value="<%= im.id %>"><span>remove</span></label>
+      <% }) %>
+    </div>
+  <% } %>
+
+  <label>Portfolio images (up to 3, max 5MB each, images only)
+    <input type="file" name="images" accept="image/*" multiple>
+  </label>
+
+  <button class="btn btn-gold btn-lg" type="submit"><%= gig ? 'Save changes' : 'Publish gig' %></button>
+</form>
+
+<%- include('partials/foot') %>

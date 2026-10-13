@@ -1,0 +1,67 @@
+<%- include('partials/head') %>
+<div class="page-head"><h1>⚓ Captain's Bridge <span class="muted small">(Admin)</span></h1></div>
+
+<div class="grid stat-grid">
+  <div class="stat gold"><span class="stat-n"><%= money(totals.gmv) %></span><span class="stat-l">Total GMV</span></div>
+  <div class="stat gold"><span class="stat-n"><%= money(totals.commission) %></span><span class="stat-l">Commission earned (10%)</span></div>
+  <div class="stat"><span class="stat-n"><%= money(totals.seller_payouts) %></span><span class="stat-l">Seller payouts (90%)</span></div>
+  <div class="stat"><span class="stat-n"><%= totals.completed %> / <%= totals.orders %></span><span class="stat-l">Completed / total orders</span></div>
+  <div class="stat"><span class="stat-n"><%= totals.users %></span><span class="stat-l">Users</span></div>
+  <div class="stat"><span class="stat-n"><%= totals.gigs %></span><span class="stat-l">Gigs</span></div>
+</div>
+
+<h2 class="section-title">Commission ledger</h2>
+<div class="table-wrap"><table class="table">
+  <thead><tr><th>Date</th><th>Order</th><th>Gig</th><th class="num">Commission (10%)</th></tr></thead>
+  <tbody>
+    <% txns.forEach(t => { %>
+      <tr><td><%= fmtDate(t.created_at) %></td><td><a href="/orders/<%= t.order_id %>">#<%= t.order_id %></a></td>
+      <td class="hide-sm"><%= t.title_snapshot.length > 40 ? t.title_snapshot.slice(0,40)+'…' : t.title_snapshot %></td>
+      <td class="num gold-text"><strong><%= money(t.amount_pkr) %></strong></td></tr>
+    <% }) %>
+    <% if (!txns.length) { %><tr><td colspan="4" class="muted">No commission recorded yet.</td></tr><% } %>
+  </tbody>
+</table></div>
+
+<h2 class="section-title">All orders</h2>
+<div class="table-wrap"><table class="table">
+  <thead><tr><th>#</th><th class="hide-sm">Gig</th><th>Buyer</th><th>Seller</th><th>Price</th><th>Status</th><th>Payment</th><th></th></tr></thead>
+  <tbody>
+    <% orders.forEach(o => { %>
+      <tr><td><a href="/orders/<%= o.id %>">#<%= o.id %></a></td>
+      <td class="hide-sm"><%= o.title_snapshot.length > 35 ? o.title_snapshot.slice(0,35)+'…' : o.title_snapshot %></td>
+      <td><%= o.buyer_name %></td><td><%= o.seller_name %></td>
+      <td><%= money(o.price_pkr) %></td>
+      <td><span class="status-pill <%= o.status %>"><%= o.status.replace('_',' ') %></span></td>
+      <td class="hide-sm"><%= o.payment_status %></td>
+      <td><a href="/orders/<%= o.id %>" class="btn btn-sm btn-navy">View</a></td></tr>
+    <% }) %>
+  </tbody>
+</table></div>
+
+<h2 class="section-title">All users</h2>
+<div class="table-wrap"><table class="table">
+  <thead><tr><th>Name</th><th class="hide-sm">Email</th><th>Role</th><th>Gigs</th><th>Orders</th><th class="hide-sm">Joined</th></tr></thead>
+  <tbody>
+    <% users.forEach(u => { %>
+      <tr><td><%= u.name %> <%= u.is_admin ? '👑' : '' %></td><td class="hide-sm"><%= u.email %></td>
+      <td><span class="status-pill <%= u.role %>"><%= u.role %></span></td>
+      <td><%= u.gig_count %></td><td><%= u.order_count %></td><td class="hide-sm"><%= fmtDate(u.created_at).slice(0,10) %></td></tr>
+    <% }) %>
+  </tbody>
+</table></div>
+
+<h2 class="section-title">All gigs</h2>
+<div class="table-wrap"><table class="table">
+  <thead><tr><th>Gig</th><th>Seller</th><th>Category</th><th>Price</th><th>Status</th></tr></thead>
+  <tbody>
+    <% gigs.forEach(g => { %>
+      <tr><td><a href="/gig/<%= g.id %>"><%= g.title.length > 40 ? g.title.slice(0,40)+'…' : g.title %></a></td>
+      <td><%= g.seller_name %></td><td class="hide-sm"><%= g.category %></td>
+      <td><%= money(g.price_pkr) %></td>
+      <td><span class="status-pill <%= g.status %>"><%= g.status %></span></td></tr>
+    <% }) %>
+  </tbody>
+</table></div>
+
+<%- include('partials/foot') %>

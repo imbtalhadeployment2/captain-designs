@@ -1,0 +1,83 @@
+<%- include('partials/head') %>
+
+<div class="gig-detail">
+  <div class="gig-main">
+    <div class="crumbs"><a href="/">Home</a> / <a href="/browse?category=<%= encodeURIComponent(gig.category) %>"><%= gig.category %></a></div>
+    <h1><%= gig.title %></h1>
+    <div class="gig-detail-meta">
+      <span>⚓ <%= gig.seller_name %></span>
+      <% if (rating.n > 0) { %><span class="rating">★ <%= rating.avg %> · <%= rating.n %> review<%= rating.n > 1 ? 's' : '' %></span><% } %>
+      <span class="status-pill <%= gig.status %>"><%= gig.status %></span>
+    </div>
+
+    <div class="gallery">
+      <% if (images.length) { %>
+        <img id="mainImg" class="gallery-main" src="/uploads/<%= images[0].filename %>" alt="<%= gig.title %>">
+        <div class="gallery-thumbs">
+          <% images.forEach((im, i) => { %>
+            <img src="/uploads/<%= im.filename %>" class="<%= i === 0 ? 'active' : '' %>" onclick="document.getElementById('mainImg').src=this.src;document.querySelectorAll('.gallery-thumbs img').forEach(t=>t.classList.remove('active'));this.classList.add('active')" alt="Sample <%= i+1 %>">
+          <% }) %>
+        </div>
+      <% } else { %><div class="gig-cover-fallback big">⚓</div><% } %>
+    </div>
+
+    <h2>About this gig</h2>
+    <p class="desc"><%= gig.description %></p>
+
+    <h2>About the seller</h2>
+    <div class="seller-card">
+      <div class="avatar"><%= gig.seller_name.charAt(0).toUpperCase() %></div>
+      <div>
+        <strong><%= gig.seller_name %></strong>
+        <p class="muted"><%= gig.seller_bio || 'CAPTAIN DESIGNS seller.' %></p>
+        <p class="muted small">On board since <%= fmtDate(gig.seller_since).slice(0, 7) %></p>
+      </div>
+    </div>
+
+    <h2>Reviews (<%= reviews.length %>)</h2>
+    <% if (!reviews.length) { %><p class="muted">No reviews yet.</p><% } %>
+    <% reviews.forEach(r => { %>
+      <div class="review">
+        <div class="review-head"><strong><%= r.buyer_name %></strong><span class="rating"><%= '★'.repeat(r.rating) %><%= '☆'.repeat(5 - r.rating) %></span></div>
+        <p><%= r.comment %></p>
+        <span class="muted small"><%= fmtDate(r.created_at) %></span>
+      </div>
+    <% }) %>
+  </div>
+
+  <aside class="gig-side">
+    <div class="order-box">
+      <div class="order-price"><%= money(gig.price_pkr) %></div>
+      <ul class="order-perks">
+        <li>🚚 Delivery in <%= gig.delivery_days %> day<%= gig.delivery_days > 1 ? 's' : '' %></li>
+        <li>💬 Direct chat with seller</li>
+        <li>🔁 Revision requests included</li>
+        <li>📁 Source files on delivery</li>
+      </ul>
+      <% if (user && user.id === gig.seller_id) { %>
+        <a href="/seller/gigs/<%= gig.id %>/edit" class="btn btn-navy btn-block">Edit my gig</a>
+      <% } else if (gig.status === 'active') { %>
+        <% if (user) { %>
+          <form action="/gigs/<%= gig.id %>/order" method="POST"><button class="btn btn-gold btn-block btn-lg" type="submit">Order Now</button></form>
+          <% if (conversationId) { %>
+            <a href="/inbox/<%= conversationId %>" class="btn btn-outline btn-block">Continue chat</a>
+          <% } else { %>
+            <form action="/inbox/start" method="POST">
+              <input type="hidden" name="seller_id" value="<%= gig.seller_id %>">
+              <input type="hidden" name="gig_id" value="<%= gig.id %>">
+              <button class="btn btn-outline btn-block" type="submit">💬 Message Seller</button>
+            </form>
+          <% } %>
+        <% } else { %>
+          <a href="/login" class="btn btn-gold btn-block btn-lg">Login to Order</a>
+          <a href="/login" class="btn btn-outline btn-block">💬 Message Seller</a>
+        <% } %>
+      <% } else { %>
+        <div class="empty-note">This gig is currently paused.</div>
+      <% } %>
+      <p class="muted small secure">🔒 Secure ordering · Pay via JazzCash / Easypaisa / bank</p>
+    </div>
+  </aside>
+</div>
+
+<%- include('partials/foot') %>
